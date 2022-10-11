@@ -1,2 +1,2 @@
-# cs457p1
-IRC Programming Assignment
+# IRC Programming Assignment
+
