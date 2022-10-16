@@ -36,11 +36,9 @@ int main(int argc, char* argv[]){
             case '?':
                 //TODO more elaborate flags error checking
                 fprintf(stderr, "%s: Erroneous argument encountered.\n", argv[0]);
-                //cerr << argv[0] << ": Erroneous argument encountered.\n";
                 return 1;
             default:
                 fprintf(stderr, "%s: Something unexpected happened while parsing arguments.\n", argv[0]);
-                //cerr << argv[0] << ": Something unexpected happened while parsing arguments.\n";
                 return 1;
         }
     }
@@ -48,7 +46,6 @@ int main(int argc, char* argv[]){
     if (port && IPaddress) { // we are the client
         //TODO add client implementation
         printf("IP address: %s\nPort: %d\n", IPaddress, port);
-        //cout << "IP address: " << IPaddress << "\nPort: " << port << '\n';
     }
     else { // we are the server
         // TODO add server implementation
