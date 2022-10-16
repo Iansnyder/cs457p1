@@ -137,7 +137,7 @@ int server_main() {
     // server accept loop
 
 
-    // end server running code
+    // end accept loop
 
     free(servinfo);
 
