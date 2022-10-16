@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void printUsage();
 
 int main(int argc, char* argv[]){
 
@@ -24,7 +25,7 @@ int main(int argc, char* argv[]){
     char * IPaddress;
     int c;
 
-    while (( c = getopt(argc, argv, "+p:s:")) != -1) {
+    while (( c = getopt(argc, argv, "+p:s:h")) != -1) {
         switch (c) {
             case 'p':
                 // TODO verify that port is a number and valid
@@ -32,6 +33,9 @@ int main(int argc, char* argv[]){
                 break;
             case 's':
                 IPaddress = optarg;
+                break;
+            case 'h':
+                printUsage();
                 break;
             case '?':
                 //TODO more elaborate flags error checking
@@ -52,4 +56,8 @@ int main(int argc, char* argv[]){
     }
     
     return 0;
+}
+
+void printUsage() {
+    printf("Make sure to run the client side this way:\n./chat -p [PORT NUMBER] -s [IP ADDRESS]\nMake sure to run the server side this way:\n./chat\n");
 }
