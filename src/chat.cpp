@@ -13,17 +13,15 @@
 * Member2 SIS ID: XXXXXX
 * Member2 Login ID: XXXXXX
 ********************************************/
-#include <string>
-#include <iostream>
 #include <unistd.h> // getopt
-#include <cstdlib>
+#include <stdlib.h>
+#include <stdio.h>
 
-using namespace std;
 
 int main(int argc, char* argv[]){
 
     int port = 0;
-    string IPaddress = "";
+    char * IPaddress;
     int c;
 
     while (( c = getopt(argc, argv, "+p:s:")) != -1) {
@@ -37,17 +35,20 @@ int main(int argc, char* argv[]){
                 break;
             case '?':
                 //TODO more elaborate flags error checking
-                cerr << argv[0] << ": Erroneous argument encountered.\n";
+                fprintf(stderr, "%s: Erroneous argument encountered.\n", argv[0]);
+                //cerr << argv[0] << ": Erroneous argument encountered.\n";
                 return 1;
             default:
-                cerr << argv[0] << ": Something unexpected happened while parsing arguments\n";
+                fprintf(stderr, "%s: Something unexpected happened while parsing arguments.\n", argv[0]);
+                //cerr << argv[0] << ": Something unexpected happened while parsing arguments.\n";
                 return 1;
         }
     }
 
-    if (port && !IPaddress.empty()) { // we are the client
+    if (port && IPaddress) { // we are the client
         //TODO add client implementation
-        cout << "IP address: " << IPaddress << "\nPort: " << port << '\n';
+        printf("IP address: %s\nPort: %d\n", IPaddress, port);
+        //cout << "IP address: " << IPaddress << "\nPort: " << port << '\n';
     }
     else { // we are the server
         // TODO add server implementation
