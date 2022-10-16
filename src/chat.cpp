@@ -104,18 +104,18 @@ bool isValidPort(const char * port) {
 }
 
 int server_main() {
-	struct addrinfo hints, *servinfo;
-	int status;
+    struct addrinfo hints, *servinfo;
+    int status;
 
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-	if ((status = getaddrinfo(NULL, SERVER_PORT, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
-		return 1;
-	} 
+    if ((status = getaddrinfo(NULL, SERVER_PORT, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+        return 1;
+    } 
 
     int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
     // could do setsockopt here to force binding
