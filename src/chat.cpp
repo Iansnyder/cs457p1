@@ -19,15 +19,20 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #define MAX_PORT_NUM 65535
+#define SERVER_PORT "3360"
+#define SERVER_BACKLOG_LIMIT 10
 
 void printUsage();
 bool isValidPort(const char * port);
+int server_main();
 
 int main(int argc, char* argv[]){
 
@@ -71,7 +76,7 @@ int main(int argc, char* argv[]){
         printf("IP address: %s\nPort: %d\n", IPaddress, port);
     }
     else { // we are the server
-        //TODO add server implementation
+        return server_main();
     }
     
     return 0;
@@ -96,4 +101,45 @@ bool isValidPort(const char * port) {
         return false;
     }
     return true;
+}
+
+int server_main() {
+    struct addrinfo hints, *servinfo;
+    int status;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if ((status = getaddrinfo(NULL, SERVER_PORT, &hints, &servinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+        return 1;
+    } 
+
+    int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+    // could do setsockopt here to force binding
+    if (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen)) {
+        perror("Bind"); //netstat -ltp to find an in use port for testing bind errors
+        return 1;
+    }
+
+    if (listen(sockfd, SERVER_BACKLOG_LIMIT)) {
+        perror("Listen");
+        return 1;
+    }
+    char ipstr[INET_ADDRSTRLEN];
+    struct sockaddr_in * serverIP = (sockaddr_in *) servinfo->ai_addr;
+    inet_ntop(servinfo->ai_family, &serverIP->sin_addr, ipstr, sizeof ipstr);
+    printf("Welcome to Chat!\n");
+    printf("Waiting for a connection on %s port %s\n", ipstr, SERVER_PORT);
+
+    // server accept loop
+
+
+    // end accept loop
+
+    free(servinfo);
+
+    return 0;
 }
