@@ -6,8 +6,8 @@
 * Member1 Login ID: isnyder
 
 * Member2 Name: Daniel Ives
-* Member2 SIS ID: XXXXXX
-* Member2 Login ID: XXXXXX
+* Member2 SIS ID: 832928510 
+* Member2 Login ID: daives
 
 * Member2 Name: Lorenzo Garcia
 * Member2 SIS ID: XXXXXX
