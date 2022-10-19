@@ -42,6 +42,7 @@ int server_main();
 int client_main(const char * server_ip, const char * server_port);
 int sendMessage(int sendfd);
 void createMessage(char * data, struct message * msg);
+int recMessage(int fromfd);
 
 int main(int argc, char* argv[]){
 
@@ -147,8 +148,14 @@ int server_main() {
     struct sockaddr_storage clientAddr;
     socklen_t sinSize = sizeof clientAddr;
     // server accept loop
+    int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
     while (1) {
-        int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
+        if (recMessage(clientSockFd)) {
+            return 1;
+        }
+        if (sendMessage(clientSockFd)) {
+            return 1;
+        }
     }
 
     // end accept loop
@@ -202,6 +209,9 @@ int client_main(const char * server_ip, const char * server_port) {
         if (sendMessage(sockfd)) {
             return 1;
         }
+        if (recMessage(sockfd)) {
+            return 1;
+        }
     }
 
 
@@ -237,4 +247,31 @@ void createMessage(char * data, struct message * msg) {
     msg->version = htons(457);
     msg->length = htons(strlen(data));
     strcpy(msg->data, data);
+}
+
+int recMessage(int fromfd){
+    printf("Found a friend! You receive first.\n");
+    struct message msg; 
+
+    if (recv(fromfd, &msg, sizeof msg, 0) == -1) {
+        perror("Receive");
+        return 1;
+    }
+
+    msg.version = ntohs(msg.version);
+    msg.length = ntohs(msg.length);
+
+    if(strlen(msg.data) != msg.length){
+        printf("%d\n", (int) strlen(msg.data));
+        printf("%d\n", msg.length);
+        return 1;
+    }
+
+    if(msg.version != 457){
+        return 1;
+    }
+
+    printf("Friend: %s\n", msg.data);
+
+    return 0;
 }
