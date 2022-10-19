@@ -224,7 +224,7 @@ int sendMessage(int sockfd) {
     struct message msg;
     createMessage(user_input, &msg);
 
-    if (send(sockfd, &msg, msg.length, 0) == -1) {
+    if (send(sockfd, &msg, msg.length+4, 0) == -1) {
         perror("Send");
         return 1;
     }
