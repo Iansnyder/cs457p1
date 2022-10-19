@@ -30,11 +30,18 @@
 #define SERVER_PORT "3360"
 #define SERVER_BACKLOG_LIMIT 10
 
+struct message {
+    uint16_t version;
+    uint16_t length;
+    char data[140];
+};
+
 void printUsage();
 bool isValidPort(const char * port);
 int server_main();
 int client_main(const char * server_ip, const char * server_port);
 int sendMessage(int sendfd);
+void createMessage(char * data, struct message * msg);
 
 int main(int argc, char* argv[]){
 
@@ -214,13 +221,20 @@ int sendMessage(int sockfd) {
         }
         break;
     }
-    size_t len = strlen(user_input);
-    
-    if (send(sockfd, user_input, len, 0) == -1) {
+    struct message msg;
+    createMessage(user_input, &msg);
+
+    if (send(sockfd, &msg, msg.length, 0) == -1) {
         perror("Send");
         return 1;
     }
 
     return 0;
 
+}
+
+void createMessage(char * data, struct message * msg) {
+    msg->version = htons(457);
+    msg->length = htons(strlen(data));
+    strcpy(msg->data, data);
 }
