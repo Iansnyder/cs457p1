@@ -33,6 +33,7 @@
 void printUsage();
 bool isValidPort(const char * port);
 int server_main();
+int client_main(const char * server_ip, const int server_port);
 
 int main(int argc, char* argv[]){
 
@@ -60,6 +61,7 @@ int main(int argc, char* argv[]){
                 break;
             case 'h':
                 printUsage();
+                return 0;
                 break;
             case '?':
                 //TODO more elaborate flags error checking
@@ -72,8 +74,8 @@ int main(int argc, char* argv[]){
     }
 
     if (port && IPaddress) { //we are the client
-        //TODO add client implementation
         printf("IP address: %s\nPort: %d\n", IPaddress, port);
+        return client_main(IPaddress, port);
     }
     else { // we are the server
         return server_main();
@@ -141,5 +143,9 @@ int server_main() {
 
     free(servinfo);
 
+    return 0;
+}
+
+int client_main(const char * server_ip, const int server_port) {
     return 0;
 }
