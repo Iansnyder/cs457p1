@@ -136,8 +136,12 @@ int server_main() {
     printf("Welcome to Chat!\n");
     printf("Waiting for a connection on %s port %s\n", ipstr, SERVER_PORT);
 
+    struct sockaddr_storage clientAddr;
+    socklen_t sinSize = sizeof clientAddr;
     // server accept loop
-
+    while (1) {
+        int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
+    }
 
     // end accept loop
 
