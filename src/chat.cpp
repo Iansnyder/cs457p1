@@ -10,8 +10,8 @@
 * Member2 Login ID: daives
 
 * Member2 Name: Lorenzo Garcia
-* Member2 SIS ID: XXXXXX
-* Member2 Login ID: XXXXXX
+* Member2 SIS ID: 832606636
+* Member2 Login ID: enzo95
 ********************************************/
 #include <unistd.h> // getopt
 #include <stdlib.h>
