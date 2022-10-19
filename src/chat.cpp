@@ -33,11 +33,11 @@
 void printUsage();
 bool isValidPort(const char * port);
 int server_main();
-int client_main(const char * server_ip, const int server_port);
+int client_main(const char * server_ip, const char * server_port);
 
 int main(int argc, char* argv[]){
 
-    int port = 0;
+    char * port;
     char * IPaddress;
     int c;
     sockaddr_in serverAddress;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
                     fprintf(stderr, "%s: %s is not a valid port number.\n", argv[0], optarg);
                     return 1;
                 }
-                port = atoi(optarg);
+                port = optarg;
                 break;
             case 's':
                 IPaddress = optarg;
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]){
     }
 
     if (port && IPaddress) { //we are the client
-        printf("IP address: %s\nPort: %d\n", IPaddress, port);
+        printf("IP address: %s\nPort: %s\n", IPaddress, port);
         return client_main(IPaddress, port);
     }
     else { // we are the server
@@ -150,6 +150,66 @@ int server_main() {
     return 0;
 }
 
-int client_main(const char * server_ip, const int server_port) {
+int client_main(const char * server_ip, const char * server_port) {
+    struct addrinfo hints, *servinfo, *p;
+    int status, sockfd;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((status = getaddrinfo(server_ip, server_port, &hints, &servinfo)) != 0)  {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+        return 1;
+    }
+
+    printf("Connecting to server...\n");
+
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("client: socket");
+			continue;
+		}
+
+		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			perror("client: connect");
+			close(sockfd);
+			continue;
+		}
+
+		break;
+	}
+
+	if (p == NULL) {
+		fprintf(stderr, "client: failed to connect\n");
+		return 2;
+	}
+    else {
+        printf("Connected!\nConnected to a friend! You send first.\n");
+    }
+
+    //client send loop
+    while (1) {
+        char * user_input = (char *) calloc(141, sizeof(char));
+        printf("You: ");
+        fgets(user_input, sizeof user_input, stdin);
+        if (user_input[140] != '\0') {
+            fprintf(stderr, "Error: Input too long.\n");
+            continue;
+        }
+        size_t len = strlen(user_input);
+        
+        if (send(sockfd, user_input, len, 0) == -1) {
+            perror("Send");
+            free(user_input);
+            return 1;
+        }
+
+        free(user_input);
+    }
+
+
+
     return 0;
 }
