@@ -34,6 +34,7 @@ void printUsage();
 bool isValidPort(const char * port);
 int server_main();
 int client_main(const char * server_ip, const char * server_port);
+int sendMessage(int sendfd);
 
 int main(int argc, char* argv[]){
 
@@ -191,25 +192,35 @@ int client_main(const char * server_ip, const char * server_port) {
 
     //client send loop
     while (1) {
-        char * user_input = (char *) calloc(141, sizeof(char));
+        if (sendMessage(sockfd)) {
+            return 1;
+        }
+    }
+
+
+
+    return 0;
+}
+
+int sendMessage(int sockfd) {
+    char user_input[141];
+    memset(user_input, '\0', 141);
+    while (1) {
         printf("You: ");
         fgets(user_input, sizeof user_input, stdin);
         if (user_input[140] != '\0') {
             fprintf(stderr, "Error: Input too long.\n");
             continue;
         }
-        size_t len = strlen(user_input);
-        
-        if (send(sockfd, user_input, len, 0) == -1) {
-            perror("Send");
-            free(user_input);
-            return 1;
-        }
-
-        free(user_input);
+        break;
+    }
+    size_t len = strlen(user_input);
+    
+    if (send(sockfd, user_input, len, 0) == -1) {
+        perror("Send");
+        return 1;
     }
 
-
-
     return 0;
+
 }
