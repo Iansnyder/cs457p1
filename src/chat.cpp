@@ -247,10 +247,9 @@ int sendMessage(int sockfd) {
     clearStdin();
 
 
-    //TODO use message struct instead
-    //struct message msg;
-    //createMessage(user_input, &msg);
-    if (send(sockfd, user_input, input_size, 0) == -1) {
+    struct message msg;
+    createMessage(user_input, &msg);
+    if (send(sockfd, &msg, (input_size+4), 0) == -1) {
         perror("Send");
         return 1;
     }
@@ -266,20 +265,29 @@ void createMessage(char * data, struct message * msg) {
 }
 
 int recMessage(int fromfd){
-    //struct message msg;
-    char recvBuffer[141]; //TODO we want to use the msg struct instead, ideally
-    memset(recvBuffer, 0, sizeof recvBuffer);
+    struct message msg;
+    memset(msg.data, 0, sizeof(msg.data));
     ssize_t numBytesRecv;
 
-    if ((numBytesRecv = recv(fromfd, recvBuffer, sizeof recvBuffer, 0)) == -1) {
+    if ((numBytesRecv = recv(fromfd, &msg, sizeof msg, 0)) == -1) {
         perror("Receive");
         return 1;
     }
-    recvBuffer[numBytesRecv] = '\0';
 
-    //TODO add header error checking
+    msg.version = ntohs(msg.version);
+    msg.length = ntohs(msg.length);
 
-    printf("Friend: %s\n", recvBuffer);
+    if (msg.version != 457) {
+        fprintf(stderr, "Error: Version numbers don't match.\n");
+        return 0;
+    }
+
+    if (msg.length != numBytesRecv-4) {
+        fprintf(stderr, "Error: Message length doesn't match.\n");
+        return 0;
+    }
+
+    printf("Friend: %s\n", msg.data);
 
     return 0;
 }
