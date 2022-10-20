@@ -117,6 +117,7 @@ bool isValidPort(const char * port) {
 int server_main() {
     struct addrinfo hints, *servinfo;
     int status;
+    int yes = 1;
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -129,7 +130,13 @@ int server_main() {
     } 
 
     int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-    // could do setsockopt here to force binding
+
+    // allow program to reuse the socket if the server crashes
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+        perror("Setsockopt");
+        return 1;
+    }
+
     if (bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen)) {
         perror("Bind"); //netstat -ltp to find an in use port for testing bind errors
         return 1;
@@ -147,18 +154,19 @@ int server_main() {
 
     struct sockaddr_storage clientAddr;
     socklen_t sinSize = sizeof clientAddr;
-    // server accept loop
+    // server recv loop
     int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
+    printf("Found a friend! You receive first.\n");
     while (1) {
-        if (recMessage(clientSockFd)) {
+        if (recMessage(clientSockFd) == -1) {
             return 1;
         }
-        if (sendMessage(clientSockFd)) {
+        if (sendMessage(clientSockFd) == -1) {
             return 1;
         }
     }
 
-    // end accept loop
+    // end recv loop
 
     free(servinfo);
 
@@ -206,35 +214,43 @@ int client_main(const char * server_ip, const char * server_port) {
 
     //client send loop
     while (1) {
-        if (sendMessage(sockfd)) {
+        if (sendMessage(sockfd) == -1) {
             return 1;
         }
-        if (recMessage(sockfd)) {
+        if (recMessage(sockfd) == -1) {
             return 1;
         }
     }
-
-
 
     return 0;
 }
 
 int sendMessage(int sockfd) {
     char user_input[141];
-    memset(user_input, '\0', 141);
+    memset(user_input, 0, sizeof user_input);
+    int input_size = 0;
     while (1) {
         printf("You: ");
-        fgets(user_input, sizeof user_input, stdin);
-        if (user_input[140] != '\0') {
+        scanf("%140[^\n]%n", user_input, &input_size);
+        if (input_size > 140) {
             fprintf(stderr, "Error: Input too long.\n");
             continue;
         }
+
+        //TODO figure out what to do if a user simply doesn't input anything and presses ENTER
+        user_input[input_size] = '\0';
         break;
     }
-    struct message msg;
-    createMessage(user_input, &msg);
 
-    if (send(sockfd, &msg, msg.length+4, 0) == -1) {
+    char c;
+    while((c = getchar()) != '\n' && c != EOF) {
+        //clear out any stuff leftover in the input
+    }
+
+    //TODO use message struct instead
+    //struct message msg;
+    //createMessage(user_input, &msg);
+    if (send(sockfd, user_input, input_size, 0) == -1) {
         perror("Send");
         return 1;
     }
@@ -250,28 +266,20 @@ void createMessage(char * data, struct message * msg) {
 }
 
 int recMessage(int fromfd){
-    printf("Found a friend! You receive first.\n");
-    struct message msg; 
+    //struct message msg;
+    char recvBuffer[141]; //TODO we want to use the msg struct instead, ideally
+    memset(recvBuffer, 0, sizeof recvBuffer);
+    ssize_t numBytesRecv;
 
-    if (recv(fromfd, &msg, sizeof msg, 0) == -1) {
+    if ((numBytesRecv = recv(fromfd, recvBuffer, sizeof recvBuffer, 0)) == -1) {
         perror("Receive");
         return 1;
     }
+    recvBuffer[numBytesRecv] = '\0';
 
-    msg.version = ntohs(msg.version);
-    msg.length = ntohs(msg.length);
+    //TODO add header error checking
 
-    if(strlen(msg.data) != msg.length){
-        printf("%d\n", (int) strlen(msg.data));
-        printf("%d\n", msg.length);
-        return 1;
-    }
-
-    if(msg.version != 457){
-        return 1;
-    }
-
-    printf("Friend: %s\n", msg.data);
+    printf("Friend: %s\n", recvBuffer);
 
     return 0;
 }
