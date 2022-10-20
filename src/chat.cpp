@@ -130,8 +130,8 @@ int server_main() {
     } 
 
     int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-    // could do setsockopt here to force binding
 
+    // allow program to reuse the socket if the server crashes
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
         perror("Setsockopt");
         return 1;
@@ -154,20 +154,19 @@ int server_main() {
 
     struct sockaddr_storage clientAddr;
     socklen_t sinSize = sizeof clientAddr;
-    // server accept loop
+    // server recv loop
     int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
     printf("Found a friend! You receive first.\n");
     while (1) {
         if (recMessage(clientSockFd) == -1) {
             return 1;
         }
-        //printf("\tGot passed recv\n");
         if (sendMessage(clientSockFd) == -1) {
             return 1;
         }
     }
 
-    // end accept loop
+    // end recv loop
 
     free(servinfo);
 
@@ -218,7 +217,6 @@ int client_main(const char * server_ip, const char * server_port) {
         if (sendMessage(sockfd) == -1) {
             return 1;
         }
-        //printf("\tGot passed send\n");
         if (recMessage(sockfd) == -1) {
             return 1;
         }
@@ -228,7 +226,6 @@ int client_main(const char * server_ip, const char * server_port) {
 }
 
 int sendMessage(int sockfd) {
-    //printf("\tIn send\n");
     char user_input[141];
     memset(user_input, 0, sizeof user_input);
     int input_size = 0;
@@ -239,7 +236,9 @@ int sendMessage(int sockfd) {
             fprintf(stderr, "Error: Input too long.\n");
             continue;
         }
-        user_input[input_size] = '\n';
+
+        //TODO figure out what to do if a user simply doesn't input anything and presses ENTER
+        user_input[input_size] = '\0';
         break;
     }
 
@@ -247,9 +246,10 @@ int sendMessage(int sockfd) {
     while((c = getchar()) != '\n' && c != EOF) {
         //clear out any stuff leftover in the input
     }
+
+    //TODO use message struct instead
     //struct message msg;
     //createMessage(user_input, &msg);
-    //printf("\tSending %d bytes: %s\n", input_size, user_input);
     if (send(sockfd, user_input, input_size, 0) == -1) {
         perror("Send");
         return 1;
@@ -266,9 +266,8 @@ void createMessage(char * data, struct message * msg) {
 }
 
 int recMessage(int fromfd){
-    //printf("\tIn receive\n");
     //struct message msg;
-    char recvBuffer[141];
+    char recvBuffer[141]; //TODO we want to use the msg struct instead, ideally
     memset(recvBuffer, 0, sizeof recvBuffer);
     ssize_t numBytesRecv;
 
@@ -278,22 +277,9 @@ int recMessage(int fromfd){
     }
     recvBuffer[numBytesRecv] = '\0';
 
-    // msg.version = ntohs(msg.version);
-    // msg.length = ntohs(msg.length);
-
-    // if(strlen(msg.data) != msg.length){
-    //     printf("\tComputed length: %d\n", (int) strlen(msg.data));
-    //     printf("\tLength from header: %d\n", msg.length);
-    //     //return 1;
-    // }
-
-    // if(msg.version != 457){
-    //     printf("\twrong version: %d\n", (int) msg.version);
-    //     //return 1;
-    // }
+    //TODO add header error checking
 
     printf("Friend: %s\n", recvBuffer);
-    //printf("\tNumber of bytes recved: %d\n", (int) numBytesRecv);
 
     return 0;
 }
