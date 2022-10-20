@@ -43,6 +43,7 @@ int client_main(const char * server_ip, const char * server_port);
 int sendMessage(int sendfd);
 void createMessage(char * data, struct message * msg);
 int recMessage(int fromfd);
+void clearStdin();
 
 int main(int argc, char* argv[]){
 
@@ -226,14 +227,15 @@ int client_main(const char * server_ip, const char * server_port) {
 }
 
 int sendMessage(int sockfd) {
-    char user_input[141];
+    char user_input[142];
     memset(user_input, 0, sizeof user_input);
     int input_size = 0;
     while (1) {
         printf("You: ");
-        scanf("%140[^\n]%n", user_input, &input_size);
+        scanf("%141[^\n]%n", user_input, &input_size);
         if (input_size > 140) {
             fprintf(stderr, "Error: Input too long.\n");
+            clearStdin();
             continue;
         }
 
@@ -242,10 +244,8 @@ int sendMessage(int sockfd) {
         break;
     }
 
-    char c;
-    while((c = getchar()) != '\n' && c != EOF) {
-        //clear out any stuff leftover in the input
-    }
+    clearStdin();
+
 
     //TODO use message struct instead
     //struct message msg;
@@ -282,4 +282,11 @@ int recMessage(int fromfd){
     printf("Friend: %s\n", recvBuffer);
 
     return 0;
+}
+
+void clearStdin() {
+    char c;
+    while((c = getchar()) != '\n' && c != EOF) {
+        //clear out any stuff leftover in the input
+    }
 }
