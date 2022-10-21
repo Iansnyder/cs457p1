@@ -227,7 +227,7 @@ int client_main(const char * server_ip, const char * server_port) {
 }
 
 int sendMessage(int sockfd) {
-    char user_input[142];
+    char user_input[141];
     memset(user_input, 0, sizeof user_input);
     int input_size = 0;
     while (1) {
@@ -273,6 +273,11 @@ int recMessage(int fromfd){
         perror("Receive");
         return 1;
     }
+
+    if (numBytesRecv == 0) {
+        printf("Connection closed by peer.\n");
+        return -1;
+        }
 
     msg.version = ntohs(msg.version);
     msg.length = ntohs(msg.length);
