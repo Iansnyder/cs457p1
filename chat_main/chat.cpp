@@ -288,8 +288,10 @@ int recMessage(int fromfd){
     }
 
     if (msg.length != numBytesRecv-4) {
-        fprintf(stderr, "Error: Message length doesn't match.\n");
-        return 0;
+        if (msg.length != strlen(msg.data)) { //interoperability with other chat programs that pad their packet
+            fprintf(stderr, "Error: Message length doesn't match.\n");
+            return 0;
+        }
     }
 
     printf("Friend: %s\n", msg.data);
