@@ -321,20 +321,22 @@ int checkForMessages(int sockfd) {
         printf("Server disconnected.\n");
         return 1;
     }
-    else {
-        msg.version = ntohs(msg.version);
-        msg.length = ntohs(msg.length);
-        if (msg.version != 457) {
-            fprintf(stderr, "Error: Invalid version number.\n");
-            return 1;
-        }
-        if (msg.length > 140) {
-            fprintf(stderr, "Error: Message too long.\n");
-            return 1;
-        }
-        printf("Friend: %s\n", msg.data);
+
+    msg.version = ntohs(msg.version);
+    msg.length = ntohs(msg.length);
+
+    if (msg.version != 457) {
+        fprintf(stderr, "Error: Tried to receive message, but version numbers don't match.\n");
         return 0;
     }
+
+    if (msg.length != numBytesRecv-4) {
+        fprintf(stderr, "Error: Tried to receive message, but length doesn't match.\n");
+        return 0;
+    }
+
+    printf("Friend: %s\n", msg.data);
+        return 0;
 }
 
 int recMessage(int fromfd){
