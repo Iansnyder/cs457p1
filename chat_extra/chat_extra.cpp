@@ -411,7 +411,7 @@ int recMessage(int fromfd, Connections *con){
         return 1;
     }
     
-
+    printf("%d::%s", user, message);
     createMessage(message, &msg);
 
     if (send(con->clients[user].fd, &msg, (msg.length+4), 0) == -1) {
