@@ -353,6 +353,7 @@ int checkForMessages(int sockfd) {
     msg.version = ntohs(msg.version);
     msg.length = ntohs(msg.length);
 
+
     if (msg.version != 457) {
         fprintf(stderr, "Error: Tried to receive message, but version numbers don't match.\n");
         return 0;
@@ -412,10 +413,12 @@ int recMessage(int fromfd, Connections *con){
         return 1;
     }
     
-    printf("%d::%s", user, message);
-    createMessage(message, &msg);
+    struct message new_msg;
+    memset(new_msg.data, 0, sizeof(new_msg.data));
+    createMessage(message, &new_msg);
 
-    if (send(con->clients[user].fd, &msg, (msg.length+4), 0) == -1) {
+
+    if (send(con->clients[user].fd, &new_msg, (strlen(new_msg.data)+4), 0) == -1) {
         perror("Send");
         return 1;
     }
