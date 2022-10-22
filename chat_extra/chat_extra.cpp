@@ -401,11 +401,12 @@ int recMessage(int fromfd, Connections *con){
 
     memset(message, 0, sizeof(message));
 
-    int num_matches = sscanf(msg.data, "%d::%c", &user, message);
-
-    if(num_matches != 2){
-        return 1;
+    if (sscanf(msg.data, "%d::%140[^\n]", &user, message) != 2) {
+        fprintf(stderr, "Error: Message format incorrect.\n");
+        return 0;
     }
+
+    printf("%d: %s\n", user, message);
 
     if((size_t) user >= con->used_connections){
         return 1;
