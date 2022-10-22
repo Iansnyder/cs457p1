@@ -7,7 +7,7 @@ The server needs to:
 
 The client needs to:
  - connect to the server
- - wait for user input, and send the message to the server
+ - wait for user input, which must be less than 140 characters (including the `ID::`) and send the message to the server
  - receive and print out messages from the server
 
 ## Implementation

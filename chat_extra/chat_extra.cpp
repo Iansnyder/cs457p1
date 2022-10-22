@@ -44,6 +44,7 @@ int client_main(const char * server_ip, const char * server_port);
 int sendMessage(int sendfd);
 void createMessage(char * data, struct message * msg);
 int recMessage(int fromfd);
+int checkForMessages(int sockfd);
 void clearStdin();
 
 typedef struct {
@@ -247,17 +248,17 @@ int client_main(const char * server_ip, const char * server_port) {
 		return 2;
 	}
     else {
-        printf("Connected!\nConnected to a friend! You send first.\n");
+        printf("Connected!\n.\n");
+        printf("Send messages to user by typing 'ID::MESSAGE'\n");
+        printf("Press enter to check for new messages.\n");
     }
 
-    //client send loop
+    //client loop
     while (1) {
         if (sendMessage(sockfd) == -1) {
             return 1;
         }
-        if (recMessage(sockfd) == -1) {
-            return 1;
-        }
+        checkForMessages(sockfd);
     }
 
     return 0;
@@ -274,6 +275,11 @@ int sendMessage(int sockfd) {
             fprintf(stderr, "Error: Input too long.\n");
             clearStdin();
             continue;
+        }
+        //if the user only enters a newline, scanf will return 0
+        if (input_size == 0) {
+            clearStdin();
+            return 0;
         }
 
         //TODO figure out what to do if a user simply doesn't input anything and presses ENTER
@@ -299,6 +305,36 @@ void createMessage(char * data, struct message * msg) {
     msg->version = htons(457);
     msg->length = htons(strlen(data));
     strcpy(msg->data, data);
+}
+
+int checkForMessages(int sockfd) {
+    struct message msg;
+    int bytesReceived = recv(sockfd, &msg, sizeof msg, MSG_DONTWAIT);
+    if (bytesReceived == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return 0;
+        }
+        perror("Recv");
+        return 1;
+    }
+    else if (bytesReceived == 0) {
+        printf("Server disconnected.\n");
+        return 1;
+    }
+    else {
+        msg.version = ntohs(msg.version);
+        msg.length = ntohs(msg.length);
+        if (msg.version != 457) {
+            fprintf(stderr, "Error: Invalid version number.\n");
+            return 1;
+        }
+        if (msg.length > 140) {
+            fprintf(stderr, "Error: Message too long.\n");
+            return 1;
+        }
+        printf("Friend: %s\n", msg.data);
+        return 0;
+    }
 }
 
 int recMessage(int fromfd){
