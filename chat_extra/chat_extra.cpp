@@ -25,6 +25,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <poll.h>
 
 #define MAX_PORT_NUM 65535
 #define SERVER_PORT "3360"
@@ -44,6 +45,39 @@ int sendMessage(int sendfd);
 void createMessage(char * data, struct message * msg);
 int recMessage(int fromfd);
 void clearStdin();
+
+typedef struct {
+    struct pollfd *clients; 
+    size_t used_connections;
+    size_t total_connections;
+} Connections;
+
+/* The following Array segmented code was "inspired" by https://stackoverflow.com/questions/3536153/c-dynamically-growing-array */
+
+void intialize_Array(Connections *con, size_t intitialSize){
+    con->clients = (pollfd *) calloc(intitialSize, sizeof(Connections));
+    con->used_connections = 0;
+    con->total_connections = intitialSize;
+}
+
+void insert_Connections (Connections *con, pollfd elements){
+    if(con->used_connections == con->total_connections){
+        con->total_connections *= 2;
+        con->clients = (pollfd *) realloc(con->clients, con->total_connections * sizeof(pollfd));
+    }
+
+    con->clients[con->used_connections] = elements;
+    con->used_connections++;
+}
+
+void freeArray(Connections *con){
+    free(con->clients);
+    con->clients = NULL;
+    con->used_connections = con->total_connections = 0;
+}
+
+/*End of "inspired" code*/
+
 
 int main(int argc, char* argv[]){
 
@@ -119,6 +153,9 @@ int server_main() {
     struct addrinfo hints, *servinfo;
     int status;
     int yes = 1;
+
+    Connections connections;
+    intialize_Array(&connections, 10);
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -303,3 +340,4 @@ void clearStdin() {
         //clear out any stuff leftover in the input
     }
 }
+
