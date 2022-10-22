@@ -336,6 +336,8 @@ void createMessage(char * data, struct message * msg) {
 }
 
 int checkForMessages(int sockfd) {
+    while(1) {
+        
     struct message msg;
     int bytesReceived = recv(sockfd, &msg, sizeof msg, MSG_DONTWAIT);
     if (bytesReceived == -1) {
@@ -360,11 +362,14 @@ int checkForMessages(int sockfd) {
     }
 
     if (msg.length != bytesReceived-4) {
-        fprintf(stderr, "Error: Tried to receive message, but length doesn't match.\n");
-        return 0;
+        if (msg.length != strlen(msg.data)) { //interoperability with other chat programs that pad their packet
+            fprintf(stderr, "Error: Message length doesn't match.\n");
+            return 0;
+        }
     }
 
     printf("Friend: %s\n", msg.data);
+    }
         return 0;
 }
 
@@ -418,7 +423,7 @@ int recMessage(int fromfd, Connections *con){
     createMessage(message, &new_msg);
 
 
-    if (send(con->clients[user].fd, &new_msg, (strlen(new_msg.data)+4), 0) == -1) {
+    if (send(con->clients[user].fd, &new_msg, sizeof new_msg, 0) == -1) {
         perror("Send");
         return 1;
     }
