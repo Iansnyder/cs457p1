@@ -29,7 +29,7 @@
 
 #define MAX_PORT_NUM 65535
 #define SERVER_PORT "3360"
-#define SERVER_BACKLOG_LIMIT 10
+#define SERVER_BACKLOG_LIMIT __INT_MAX__
 
 struct message {
     uint16_t version;
@@ -37,21 +37,23 @@ struct message {
     char data[140];
 };
 
+typedef struct {
+    struct pollfd *clients; 
+    size_t used_connections;
+    size_t total_connections;
+} Connections;
+
 void printUsage();
 bool isValidPort(const char * port);
 int server_main();
 int client_main(const char * server_ip, const char * server_port);
 int sendMessage(int sendfd);
 void createMessage(char * data, struct message * msg);
-int recMessage(int fromfd);
+int recMessage(int fromfd, Connections *con);
 int checkForMessages(int sockfd);
 void clearStdin();
-
-typedef struct {
-    struct pollfd *clients; 
-    size_t used_connections;
-    size_t total_connections;
-} Connections;
+void *get_in_addr(struct sockaddr *sa);
+struct pollfd setup_listening_socket(int sockID);
 
 /* The following Array segmented code was "inspired" by https://stackoverflow.com/questions/3536153/c-dynamically-growing-array */
 
@@ -154,6 +156,7 @@ int server_main() {
     struct addrinfo hints, *servinfo;
     int status;
     int yes = 1;
+    
 
     Connections connections;
     intialize_Array(&connections, 10);
@@ -191,18 +194,43 @@ int server_main() {
     printf("Welcome to Chat!\n");
     printf("Waiting for a connection on %s port %s\n", ipstr, SERVER_PORT);
 
-    struct sockaddr_storage clientAddr;
-    socklen_t sinSize = sizeof clientAddr;
     // server recv loop
-    int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize);
-    printf("Found a friend! You receive first.\n");
-    while (1) {
-        if (recMessage(clientSockFd) == -1) {
-            return 1;
+    // add server as listener with events
+    insert_Connections(&connections, setup_listening_socket(sockfd));
+
+    while(1){
+        int poll_count = poll(connections.clients, connections.used_connections, -1);
+
+        if(poll_count == -1){
+            perror("poll");
+            exit(1);
         }
-        if (sendMessage(clientSockFd) == -1) {
-            return 1;
+
+        for(size_t i = 0; i < connections.used_connections; i++){
+
+            if(connections.clients[i].revents & POLLIN){
+                if(connections.clients[i].fd == sockfd){
+                    struct sockaddr_storage clientAddr;
+                    socklen_t sinSize = sizeof clientAddr;
+                    // server recv loop
+                    int clientSockFd = accept(sockfd, (struct sockaddr *)&clientAddr, &sinSize); 
+
+                    if(clientSockFd == -1){
+                        perror("accept");
+                    }
+                    else{
+                        char remoteIP[INET6_ADDRSTRLEN];
+                        insert_Connections(&connections, setup_listening_socket(clientSockFd));  
+                        printf("pollserver: newconnection from %s on socket %d\n", inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr*) &clientAddr), remoteIP, INET6_ADDRSTRLEN), clientSockFd);
+                    }
+                }
+                else {
+                    recMessage(connections.clients[i].fd, &connections);
+
+                }
+            }
         }
+
     }
 
     // end recv loop
@@ -337,7 +365,7 @@ int checkForMessages(int sockfd) {
     }
 }
 
-int recMessage(int fromfd){
+int recMessage(int fromfd, Connections *con){
     struct message msg;
     memset(msg.data, 0, sizeof(msg.data));
     ssize_t numBytesRecv;
@@ -365,7 +393,30 @@ int recMessage(int fromfd){
         return 0;
     }
 
-    printf("Friend: %s\n", msg.data);
+    int user;
+
+    char message [140];
+
+    memset(message, 0, sizeof(message));
+
+    int num_matches = sscanf(msg.data, "%d::%c", &user, message);
+
+    if(num_matches != 2){
+        return 1;
+    }
+
+    if((size_t) user >= con->used_connections){
+        return 1;
+    }
+    
+
+    createMessage(message, &msg);
+
+    if (send(con->clients[user].fd, &msg, (msg.length+4), 0) == -1) {
+        perror("Send");
+        return 1;
+    }
+
 
     return 0;
 }
@@ -375,5 +426,20 @@ void clearStdin() {
     while((c = getchar()) != '\n' && c != EOF) {
         //clear out any stuff leftover in the input
     }
+}
+
+struct pollfd setup_listening_socket(int sockID){
+    struct pollfd new_Socket;
+    new_Socket.fd = sockID;
+    new_Socket.events = POLLIN;
+    return new_Socket;
+}
+
+void *get_in_addr(struct sockaddr *sa){
+    if (sa->sa_family == AF_INET) {
+    return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
