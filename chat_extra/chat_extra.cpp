@@ -358,7 +358,7 @@ int checkForMessages(int sockfd) {
         return 0;
     }
 
-    if (msg.length != numBytesRecv-4) {
+    if (msg.length != bytesReceived-4) {
         fprintf(stderr, "Error: Tried to receive message, but length doesn't match.\n");
         return 0;
     }
