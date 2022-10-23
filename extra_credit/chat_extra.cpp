@@ -221,7 +221,15 @@ int server_main() {
                     else{
                         char remoteIP[INET6_ADDRSTRLEN];
                         insert_Connections(&connections, setup_listening_socket(clientSockFd));  
-                        printf("pollserver: newconnection from %s on socket %d\n", inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr*) &clientAddr), remoteIP, INET6_ADDRSTRLEN), clientSockFd);
+                        printf("pollserver: New connection from %s on socket %d\n", inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr*) &clientAddr), remoteIP, INET6_ADDRSTRLEN), clientSockFd);
+                        
+                        //send welcome message
+                        char welcomeMessage[140];
+                        sprintf(welcomeMessage, "Server: Welcome to Chat! Your client ID is %d", (int) connections.used_connections - 1);
+                        struct message msg;
+                        createMessage(welcomeMessage, &msg);
+                        send(clientSockFd, &msg, sizeof(msg), 0);
+                        printf("pollserver: sent welcome message to %d\n", clientSockFd);
                     }
                 }
                 else {
@@ -281,11 +289,14 @@ int client_main(const char * server_ip, const char * server_port) {
         printf("Press enter to check for new messages.\n");
     }
 
+    usleep(200000);
+    checkForMessages(sockfd); //for welcome message
     //client loop
     while (1) {
         if (sendMessage(sockfd) == -1) {
             return 1;
         }
+        usleep(200000); //in case server responds to message
         checkForMessages(sockfd);
     }
 
@@ -408,11 +419,19 @@ int recMessage(int fromfd, Connections *con){
     memset(message, 0, sizeof(message));
 
     if (sscanf(msg.data, "%d::%140[^\n]", &user, message) != 2) {
-        fprintf(stderr, "Error: Message format incorrect.\n");
+        //if the format doesn't match, the message was for the server, so print it
+        printf("Friend: %s\n", msg.data);
+
+        char thankYou[140];
+        sprintf(thankYou, "Server: Thank you for the message! To send to a user, make sure to write your message using ID::MESSAGE format");
+        struct message msg;
+        createMessage(thankYou, &msg);
+        if (send(fromfd, &msg, (strlen(msg.data)+4), 0) == -1) {
+            perror("Send");
+            return 1;
+        }
         return 0;
     }
-
-    printf("%d: %s\n", user, message);
 
     if((size_t) user >= con->used_connections){
         return 1;
