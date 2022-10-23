@@ -39,6 +39,7 @@ struct message {
 
 typedef struct {
     struct pollfd *clients; 
+    bool *is_connected;
     size_t used_connections;
     size_t total_connections;
 } Connections;
@@ -59,6 +60,7 @@ struct pollfd setup_listening_socket(int sockID);
 
 void intialize_Array(Connections *con, size_t intitialSize){
     con->clients = (pollfd *) calloc(intitialSize, sizeof(Connections));
+    con->is_connected = (bool *) calloc(intitialSize, sizeof(bool));
     con->used_connections = 0;
     con->total_connections = intitialSize;
 }
@@ -67,14 +69,17 @@ void insert_Connections (Connections *con, pollfd elements){
     if(con->used_connections == con->total_connections){
         con->total_connections *= 2;
         con->clients = (pollfd *) realloc(con->clients, con->total_connections * sizeof(pollfd));
+        con->is_connected = (bool *) realloc(con->is_connected, con->total_connections * sizeof(bool));
     }
 
     con->clients[con->used_connections] = elements;
+    con->is_connected[con->used_connections] = true;
     con->used_connections++;
 }
 
 void freeArray(Connections *con){
     free(con->clients);
+    free(con->is_connected);
     con->clients = NULL;
     con->used_connections = con->total_connections = 0;
 }
@@ -208,6 +213,10 @@ int server_main() {
 
         for(size_t i = 0; i < connections.used_connections; i++){
 
+            if(connections.is_connected[i] == false){
+                continue;
+            }
+
             if(connections.clients[i].revents & POLLIN){
                 if(connections.clients[i].fd == sockfd){
                     struct sockaddr_storage clientAddr;
@@ -233,7 +242,10 @@ int server_main() {
                     }
                 }
                 else {
-                    recMessage(connections.clients[i].fd, &connections);
+                    if (recMessage(connections.clients[i].fd, &connections) == -1) {
+                        connections.is_connected[i] = false;
+                        printf("pollserver: user %d disconnected\n", (int) i);
+                    }
 
                 }
             }
@@ -244,6 +256,7 @@ int server_main() {
     // end recv loop
 
     free(servinfo);
+    freeArray(&connections);
 
     return 0;
 }
@@ -284,13 +297,14 @@ int client_main(const char * server_ip, const char * server_port) {
 		return 2;
 	}
     else {
-        printf("Connected!\n.\n");
+        printf("Connected!\n\n");
         printf("Send messages to user by typing 'ID::MESSAGE'\n");
-        printf("Press enter to check for new messages.\n");
+        printf("Press enter to check for new messages.\n\n");
     }
 
     usleep(200000);
     checkForMessages(sockfd); //for welcome message
+    printf("\n\n");
     //client loop
     while (1) {
         if (sendMessage(sockfd) == -1) {
@@ -423,8 +437,10 @@ int recMessage(int fromfd, Connections *con){
         printf("Friend: %s\n", msg.data);
 
         char thankYou[140];
+        memset(thankYou, 0, sizeof(thankYou));
         sprintf(thankYou, "Server: Thank you for the message! To send to a user, make sure to write your message using ID::MESSAGE format");
         struct message msg;
+        memset(msg.data, 0, sizeof(msg.data));
         createMessage(thankYou, &msg);
         if (send(fromfd, &msg, (strlen(msg.data)+4), 0) == -1) {
             perror("Send");
@@ -433,7 +449,19 @@ int recMessage(int fromfd, Connections *con){
         return 0;
     }
 
-    if((size_t) user >= con->used_connections){
+    if((size_t) user >= con->used_connections || con->is_connected[user] == false) {
+        char notConnectedMsg[140];
+        memset(notConnectedMsg, 0, sizeof(notConnectedMsg));
+        sprintf(notConnectedMsg, "Server: User %d is not connected.", user);
+        notConnectedMsg[strlen(notConnectedMsg)] = '\0';
+        struct message error_msg;
+        memset(error_msg.data, 0, sizeof(error_msg.data));
+        createMessage(notConnectedMsg, &error_msg);
+        if (send(fromfd, &error_msg, (strlen(error_msg.data)+4), 0) == -1) {
+            perror("Send");
+            return 1;
+        }
+
         return 1;
     }
     
