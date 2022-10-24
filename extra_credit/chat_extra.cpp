@@ -380,14 +380,13 @@ int checkForMessages(int sockfd) {
     msg.version = ntohs(msg.version);
     msg.length = ntohs(msg.length);
 
-
     if (msg.version != 457) {
         fprintf(stderr, "Error: Tried to receive message, but version numbers don't match.\n");
         return 0;
     }
 
     if (msg.length != bytesReceived-4) {
-        if (msg.length != strlen(msg.data)) { //interoperability with other chat programs that pad their packet
+        if (msg.length != strlen(msg.data)) { //interoperability with other chat programs that pad their packet with null bytes
             fprintf(stderr, "Error: Message length doesn't match.\n");
             return 0;
         }
@@ -442,7 +441,7 @@ int recMessage(int fromfd, Connections *con){
         struct message msg;
         memset(msg.data, 0, sizeof(msg.data));
         createMessage(thankYou, &msg);
-        if (send(fromfd, &msg, (strlen(msg.data)+4), 0) == -1) {
+        if (send(fromfd, &msg, sizeof(struct message), 0) == -1) {
             perror("Send");
             return 1;
         }
@@ -457,7 +456,7 @@ int recMessage(int fromfd, Connections *con){
         struct message error_msg;
         memset(error_msg.data, 0, sizeof(error_msg.data));
         createMessage(notConnectedMsg, &error_msg);
-        if (send(fromfd, &error_msg, (strlen(error_msg.data)+4), 0) == -1) {
+        if (send(fromfd, &error_msg, sizeof(struct message), 0) == -1) {
             perror("Send");
             return 1;
         }
@@ -474,7 +473,6 @@ int recMessage(int fromfd, Connections *con){
         perror("Send");
         return 1;
     }
-
 
     return 0;
 }
