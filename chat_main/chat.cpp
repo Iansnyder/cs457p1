@@ -1,5 +1,5 @@
 /*******************************************
-* Group Name  : rm -rf /
+* Group Name  : earlybirds
  
 * Member1 Name: Ian Snyder
 * Member1 SIS ID: 831615373
